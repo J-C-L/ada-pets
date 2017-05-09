@@ -39,10 +39,32 @@ class PetsControllerTest < ActionDispatch::IntegrationTest
   end
 
   describe "show" do
-    # This bit is up to you!
-    it "can get a pet" do
+    it "can get a pet that exists" do
       get pet_path(pets(:two).id)
       must_respond_with :success
+
+      body = JSON.parse(response.body)
+      body["name"].must_equal "Horsetooth"
+    end
+
+    it "returns json" do
+      get pet_path(pets(:two).id)
+      response.header['Content-Type'].must_include 'json'
+    end
+
+
+    it "gives an approriate error message and status not found for a pet that does not exist" do
+      id= Pet.last.id + 1
+      get pet_path(id)
+      must_respond_with :not_found
+      # OR
+      # must_respond_with 404
+
+      body = JSON.parse(response.body)
+      # body.values.must_include "Could not find a pet with id #{id}"
+      # OR
+      errors_hash = { "errors" => "Could not find a pet with id #{id}"}
+      body.must_equal errors_hash
     end
   end
 
@@ -55,32 +77,37 @@ class PetsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    # it "Creates a new pet" do
-    #   assert_difference "Pet.count", 1 do
-    #     post pets_url, params: { pet: pet_data }
-    #     assert_response :success
-    #   end
-    #
-    #   body = JSON.parse(response.body)
-    #   body.must_be_kind_of Hash
-    #   body.must_include "id"
-    #
-    #   # Check that the ID matches
-    #   Pet.find(body["id"]).name.must_equal pet_data[:name]
-    # end
-    #
-    # it "Returns an error for an invalid pet" do
-    #   bad_data = pet_data.clone()
-    #   bad_data.delete(:name)
-    #   assert_no_difference "Pet.count" do
-    #     post pets_url, params: { pet: bad_data }
-    #     assert_response :bad_request
-    #   end
-    #
-    #   body = JSON.parse(response.body)
-    #   body.must_be_kind_of Hash
-    #   body.must_include "errors"
-    #   body["errors"].must_include "name"
-    # end
+    it "Creates a new pet" do
+
+      #THESE ARE ASSERT STYLE TESTING, BUT THEY GIVE A SENSE OF WHAT TO TEST
+
+      # ALSO TEST THAT THE ID IS INCLUDED IN THE JSON RETURNED
+      
+      assert_difference "Pet.count", 1 do
+        post pets_url, params: { pet: pet_data }
+        assert_response :success
+      end
+
+      body = JSON.parse(response.body)
+      body.must_be_kind_of Hash
+      body.must_include "id"
+
+      # Check that the ID matches
+      Pet.find(body["id"]).name.must_equal pet_data[:name]
+    end
+
+    it "Returns an error for an invalid pet" do
+      bad_data = pet_data.clone()
+      bad_data.delete(:name)
+      assert_no_difference "Pet.count" do
+        post pets_url, params: { pet: bad_data }
+        assert_response :bad_request
+      end
+
+      body = JSON.parse(response.body)
+      body.must_be_kind_of Hash
+      body.must_include "errors"
+      body["errors"].must_include "name"
+    end
   end
 end
